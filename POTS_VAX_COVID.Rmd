@@ -1,0 +1,1072 @@
+---
+title: "POTS_VAX_COVID"
+output: html_document
+date: "2022-10-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(lubridate)
+library(gtsummary)
+library(knitr)
+
+pots <- read_csv(#####POTS DATA SET######, col_types = cols(
+     MRN = col_double(),
+     DOB = col_date(format = "%F %T"),
+     RACE = col_character(),
+     ETHNICITY = col_character(),
+     GENDER = col_character(),
+     `VACCINE 1` = col_character(),
+     `FIRST_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `SECOND_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `THIRD_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `FOURTH_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `FIFTH_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `VACCINE 2` = col_character(),
+     `FIRST_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `SECOND_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `THIRD_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `FOURTH_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `FIFTH_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `VACCINE 3` = col_character(),
+     `FIRST_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `SECOND_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `THIRD_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `FOURTH_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `FIFTH_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `COVID_CONFIRMED_DTTM 1` = col_date(format = "%F %T"),
+     `COVID_CONFIRMED_DTTM 2` = col_date(format = "%F %T"),
+     `COVID_CONFIRMED_DTTM 3` = col_date(format = "%F %T"),
+     `COVID_CONFIRMED_DTTM 4` = col_date(format = "%F %T"),
+     sum_enc_b4 = col_double(),
+     sum_enc_after = col_double(),
+     DYSAUTONOMIA = col_double(),
+     DYSAUTONOMIA_FIRST_DATE = col_date(format = "%F %T"),
+     POTS = col_double(),
+     POTS_FIRST_DATE = col_date(format = "%F %T"),
+     MAST_CELL = col_double(),
+     MAST_CELL_FIRST_DATE = col_date(format = "%F %T"),
+     `EHLERS-DANLOS` = col_double(),
+     `EHLERS-DANLOS_FIRST_DATE` = col_date(format = "%F %T"),
+     FATIGUE = col_double(),
+     FATIGUE_FIRST_DATE = col_date(format = "%F %T"),
+     ORTHO_HYPO = col_double(),
+     ORTHO_HYPO_FIRST_DATE = col_date(format = "%F %T"),
+     DIZZINESS = col_double(),
+     DIZZINESS_FIRST_DATE = col_date(format = "%F %T"),
+     HTN = col_double(),
+     HTN_FIRST_DATE = col_date(format = "%F %T"),
+     DM = col_double(),
+     DM_FIRST_DATE = col_date(format = "%F %T"),
+     MI = col_double(),
+     MI_FIRST_DATE = col_date(format = "%F %T"),
+     HF = col_double(),
+     HF_FIRST_DATE = col_date(format = "%F %T"),
+     STROKE = col_double(),
+     STROKE_FIRST_DATE = col_date(format = "%F %T"),
+     HLP = col_double(),
+     HLP_FIRST_DATE = col_date(format = "%F %T"),
+     MYOCARDITIS = col_double(),
+     MYOCARDITIS_FIRST_DATE = col_date(format = "%F %T"),
+     DEPRESSION = col_double(),
+     DEPRESSION_FIRST_DATE = col_date(format = "%F %T"),
+     ANXIETY = col_double(),
+     ANXIETY_FIRST_DATE = col_date(format = "%F %T"),
+     ECZEMA  = col_double(),
+     ECZEMA_FIRST_DATE = col_date(format = "%F %T"),
+     ANXIETY = col_double(),
+     ANXIETY_FIRST_DATE = col_date(format = "%F %T"),
+     UTI = col_double(),
+     UTI_FIRST_DATE = col_date(format = "%F %T"),
+     IRON_DEFINICIENCY = col_double(),
+     IRON_DEFINICIENCY_FIRST_DATE = col_date(format = "%F %T"),
+     GERD = col_double(),
+     GERD_FIRST_DATE = col_date(format = "%F %T"),
+     OSTEOARTHRITIS = col_double(),
+     OSTEOARTHRITIS_FIRST_DATE = col_date(format = "%F %T"),
+     BACK_PAIN = col_double(),
+     BACK_PAIN_FIRST_DATE = col_date(format = "%F %T"),
+     EDEMA = col_double(),
+     EDEMA_FIRST_DATE = col_date(format = "%F %T"),
+     HEADACHE = col_double(),
+     HEADACHE_FIRST_DATE = col_date(format = "%F %T"),
+     AGE = col_double()
+   )) %>% 
+  clean_names() %>% 
+  group_by(mrn) %>% 
+  slice(1L) %>% 
+  ungroup() %>% 
+  filter(year(first_vaccine_date_1) >= 2020)
+
+dayinterval <- function(x, y) {
+ floor(interval(y, x) / days(1)) 
+}
+
+pi90v1b <- pots %>% 
+  filter(is.na(covid_confirmed_dttm_1) |  interval(first_vaccine_date_1, covid_confirmed_dttm_1)/days(1) > 90)
+pi90v1m <- pots %>% 
+  filter(is.na(covid_confirmed_dttm_1) |  interval(first_vaccine_date_1, covid_confirmed_dttm_1)/days(1) > 90) %>% 
+  filter(gender == "MALE")
+pi90v1f <- pots %>% 
+  filter(is.na(covid_confirmed_dttm_1) |  interval(first_vaccine_date_1, covid_confirmed_dttm_1)/days(1) > 90) %>% 
+  filter(gender == "FEMALE")
+
+pi90v1f44 <- pots %>% 
+  filter(is.na(covid_confirmed_dttm_1) |  interval(first_vaccine_date_1, covid_confirmed_dttm_1)/days(1) > 90) %>% 
+  filter(gender == "FEMALE") %>% 
+  filter(age <= 44)
+
+
+```
+
+Vaccination
+Interval: 90 days
+Vaccine: First
+Sex: Both
+
+```{r, echo=FALSE}
+nm1 <- pi90v1b %>% 
+  select(contains("first_date")) %>% 
+  names() %>% 
+  unique()
+
+first <- nm1 %>% 
+  map(~ pi90v1b %>% 
+        select(matches(.x), first_vaccine_date_1) %>%
+        reduce(dayinterval)) %>%
+  set_names(paste0(nm1, "_dayinterval_vax1"))
+
+nm2 <- first %>% 
+  names()
+
+within_90days <- bind_cols(first) %>% 
+  transmute(across(all_of(nm2), ~if_else(.x >= -90 & .x <= 90, .x, NaN))) %>% 
+  rename_with(~str_c(., "_within90days"), everything())
+
+nm4 <- within_90days %>% 
+  names()
+
+within_90days_binary <- within_90days %>% 
+  transmute(across(all_of(nm4), ~factor(case_when(.x < 0 ~ "before",
+                                            .x >= 0 ~ "after"), levels = c("before", "after")))) %>% 
+  rename_with(~str_c(., "_binary"), everything())
+
+total <- within_90days_binary %>% 
+  select(contains("vax1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  group_by(disease) %>% 
+  summarize(n= n())  
+
+before <- within_90days_binary %>% 
+  select(contains("vax1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "before") %>% 
+  group_by(disease) %>% 
+  summarize(before = n())  
+
+after <- within_90days_binary %>% 
+  select(contains("vax1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "after") %>% 
+  group_by(disease) %>% 
+  summarize(after = n())
+
+allpt_90days <- total %>% 
+  left_join(before, by = "disease") %>% 
+  left_join(after, by = "disease") %>% 
+  mutate(ratio = after/before) %>% 
+  arrange(desc(ratio))
+
+pi90v1b_chart <-  allpt_90days %>% 
+  mutate(disease = case_when(
+    disease == "myocarditis_first_date_dayinterval_vax1_within90days_binary" ~ "myocarditis",
+    disease == "mast_cell_first_date_dayinterval_vax1_within90days_binary" ~ "mast_cell",
+    disease == "osteoarthritis_first_date_dayinterval_vax1_within90days_binary" ~ "osteoarthritis",
+    disease == "dysautonomia_first_date_dayinterval_vax1_within90days_binary" ~ "dysautonomia",
+    disease == "pots_first_date_dayinterval_vax1_within90days_binary" ~ "pots",
+    disease == "mi_first_date_dayinterval_vax1_within90days_binary" ~ "mi",
+    disease == "uti_first_date_dayinterval_vax1_within90days_binary" ~ "uti",
+    disease == "ehlers_danlos_first_date_dayinterval_vax1_within90days_binary" ~ "eds",
+    disease == "hf_first_date_dayinterval_vax1_within90days_binary" ~ "chf",
+    disease == "dizziness_first_date_dayinterval_vax1_within90days_binary" ~ "dizziness",
+    disease == "edema_first_date_dayinterval_vax1_within90days_binary" ~ "edema",
+    disease == "iron_definiciency_first_date_dayinterval_vax1_within90days_binary" ~ "ida",
+    disease == "back_pain_first_date_dayinterval_vax1_within90days_binary" ~ "lumbago",
+    disease == "stroke_first_date_dayinterval_vax1_within90days_binary" ~ "stroke",
+    disease == "fatigue_first_date_dayinterval_vax1_within90days_binary" ~ "fatigue" ,
+    disease == "hlp_first_date_dayinterval_vax1_within90days_binary" ~ "hld" ,
+    disease == "depression_first_date_dayinterval_vax1_within90days_binary" ~ "depression" ,
+    disease == "htn_first_date_dayinterval_vax1_within90days_binary" ~ "htn" ,
+    disease == "anxiety_first_date_dayinterval_vax1_within90days_binary" ~ "anxiety" ,
+    disease == "gerd_first_date_dayinterval_vax1_within90days_binary" ~ "gerd" ,
+    disease == "dm_first_date_dayinterval_vax1_within90days_binary" ~ "dm" ,
+    disease == "cellulitis_first_date_dayinterval_vax1_within90days_binary" ~"cellulitis" ,
+    disease == "eczema_first_date_dayinterval_vax1_within90days_binary" ~ "eczema" ,
+    disease == "headache_first_date_dayinterval_vax1_within90days_binary" ~ "headache" ,
+    disease == "ortho_hypo_first_date_dayinterval_vax1_within90days_binary" ~ "orthostasis"
+  )) %>% 
+  mutate(group = case_when(
+    disease == "myocarditis" ~ "Myocarditis",
+    disease == "mast_cell" | disease == "dysautonomia" | disease == "eds" | disease == "fatigue" | disease == "pots" ~ "POTS Group",
+    disease == "osteoarthritis" | disease == "uti" | disease == "edema" | disease == "ida" |
+      disease == "lumbago" | disease == "depression" | disease == "anxiety" | disease == "gerd" |
+      disease == "cellulitis" | disease == "eczema" | disease == "headache" | disease == "hld" |
+      disease == "htn" | disease == "dm" | disease == "dizziness" | disease == "orthostasis" ~ "Other",
+    disease == "mi" | disease == "chf" | disease == "stroke" ~ "MACE"
+  )) %>% 
+  filter(group != "MACE") %>% 
+  filter(disease != "orthostasis", disease != "osteoarthritis")
+
+kable(pi90v1b_chart)
+
+pi90v1b_chart %>%  
+  ggplot(aes(x = reorder(disease, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnoses") +
+  ggtitle("Diagnosis within 90 days pre/post first vaccination (both sexes, no COVID)") +
+  guides(fill=guide_legend(title="Clinical Group")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+pi90v1b_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before), after = sum(after)) %>% 
+  mutate(ratio = after/before) %>% 
+  ggplot(aes(x = reorder(group, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnosis group") +
+  ggtitle("Diagnosis group within 90 days pre/post first vaccination (both sexes, no COVID)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+
+pi90v1b_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before), after = sum(after)) %>% 
+  mutate(ratio = after/before) 
+
+prop.test(2581, 4526)
+0.5702607/(1-0.5702607)
+
+```
+
+Vaccination
+Interval: 90 days
+Vaccine: First
+Sex: MALE
+
+```{r, echo=FALSE}
+nm1 <- pi90v1m %>% 
+  select(contains("first_date")) %>% 
+  names() %>% 
+  unique()
+
+first <- nm1 %>% 
+  map(~ pi90v1m %>% 
+        select(matches(.x), first_vaccine_date_1) %>%
+        reduce(dayinterval)) %>%
+  set_names(paste0(nm1, "_dayinterval_vax1"))
+
+nm2 <- first %>% 
+  names()
+
+within_90days <- bind_cols(first) %>% 
+  transmute(across(all_of(nm2), ~if_else(.x >= -90 & .x <= 90, .x, NaN))) %>% 
+  rename_with(~str_c(., "_within90days"), everything())
+
+nm4 <- within_90days %>% 
+  names()
+
+within_90days_binary <- within_90days %>% 
+  transmute(across(all_of(nm4), ~factor(case_when(.x < 0 ~ "before",
+                                            .x >= 0 ~ "after"), levels = c("before", "after")))) %>% 
+  rename_with(~str_c(., "_binary"), everything())
+
+total <- within_90days_binary %>% 
+  select(contains("vax1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  group_by(disease) %>% 
+  summarize(n= n())  
+
+before <- within_90days_binary %>% 
+  select(contains("vax1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "before") %>% 
+  group_by(disease) %>% 
+  summarize(before = n())  
+
+after <- within_90days_binary %>% 
+  select(contains("vax1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "after") %>% 
+  group_by(disease) %>% 
+  summarize(after = n())
+
+allpt_90days <- total %>% 
+  left_join(before, by = "disease") %>% 
+  left_join(after, by = "disease") %>% 
+  mutate(ratio = after/before) %>% 
+  arrange(desc(ratio))
+
+pi90v1m_chart <-  allpt_90days %>% 
+  mutate(disease = case_when(
+    disease == "myocarditis_first_date_dayinterval_vax1_within90days_binary" ~ "myocarditis",
+    disease == "mast_cell_first_date_dayinterval_vax1_within90days_binary" ~ "mast_cell",
+    disease == "osteoarthritis_first_date_dayinterval_vax1_within90days_binary" ~ "osteoarthritis",
+    disease == "dysautonomia_first_date_dayinterval_vax1_within90days_binary" ~ "dysautonomia",
+    disease == "pots_first_date_dayinterval_vax1_within90days_binary" ~ "pots",
+    disease == "mi_first_date_dayinterval_vax1_within90days_binary" ~ "mi",
+    disease == "uti_first_date_dayinterval_vax1_within90days_binary" ~ "uti",
+    disease == "ehlers_danlos_first_date_dayinterval_vax1_within90days_binary" ~ "eds",
+    disease == "hf_first_date_dayinterval_vax1_within90days_binary" ~ "chf",
+    disease == "dizziness_first_date_dayinterval_vax1_within90days_binary" ~ "dizziness",
+    disease == "edema_first_date_dayinterval_vax1_within90days_binary" ~ "edema",
+    disease == "iron_definiciency_first_date_dayinterval_vax1_within90days_binary" ~ "ida",
+    disease == "back_pain_first_date_dayinterval_vax1_within90days_binary" ~ "lumbago",
+    disease == "stroke_first_date_dayinterval_vax1_within90days_binary" ~ "stroke",
+    disease == "fatigue_first_date_dayinterval_vax1_within90days_binary" ~ "fatigue" ,
+    disease == "hlp_first_date_dayinterval_vax1_within90days_binary" ~ "hld" ,
+    disease == "depression_first_date_dayinterval_vax1_within90days_binary" ~ "depression" ,
+    disease == "htn_first_date_dayinterval_vax1_within90days_binary" ~ "htn" ,
+    disease == "anxiety_first_date_dayinterval_vax1_within90days_binary" ~ "anxiety" ,
+    disease == "gerd_first_date_dayinterval_vax1_within90days_binary" ~ "gerd" ,
+    disease == "dm_first_date_dayinterval_vax1_within90days_binary" ~ "dm" ,
+    disease == "cellulitis_first_date_dayinterval_vax1_within90days_binary" ~"cellulitis" ,
+    disease == "eczema_first_date_dayinterval_vax1_within90days_binary" ~ "eczema" ,
+    disease == "headache_first_date_dayinterval_vax1_within90days_binary" ~ "headache" ,
+    disease == "ortho_hypo_first_date_dayinterval_vax1_within90days_binary" ~ "orthostasis"
+  )) %>% 
+  mutate(group = case_when(
+    disease == "myocarditis" ~ "Myocarditis",
+    disease == "mast_cell" | disease == "dysautonomia" | disease == "eds" | disease == "fatigue" | disease == "pots" ~ "POTS Group",
+    disease == "osteoarthritis" | disease == "uti" | disease == "edema" | disease == "ida" |
+      disease == "lumbago" | disease == "depression" | disease == "anxiety" | disease == "gerd" |
+      disease == "cellulitis" | disease == "eczema" | disease == "headache" | disease == "hld" |
+      disease == "htn" | disease == "dm" | disease == "dizziness" | disease == "orthostasis" ~ "Other",
+    disease == "mi" | disease == "chf" | disease == "stroke" ~ "MACE"
+  )) %>% 
+  filter(group != "MACE") %>% 
+  filter(disease != "orthostasis", disease != "osteoarthritis")
+
+kable(pi90v1m_chart)
+
+pi90v1m_chart %>%  
+  ggplot(aes(x = reorder(disease, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2', 
+                     limits = c(0.25, 4)) +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnoses") +
+  ggtitle("Diagnosis within 90 days pre/post first vaccination (male only, no COVID)") +
+  guides(fill=guide_legend(title="Clinical Group")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+pi90v1m_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before), after = sum(after)) %>% 
+  mutate(ratio = after/before) %>% 
+  ggplot(aes(x = reorder(group, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnosis group") +
+  ggtitle("Diagnosis group within 90 days pre/post first vaccination (male only, no COVID)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+pi90v1m_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before), after = sum(after)) %>% 
+  mutate(ratio = after/before) 
+
+```
+
+Vaccination
+Interval: 90 days
+Vaccine: First
+Sex: FEMALE
+
+```{r, echo=FALSE}
+nm1 <- pi90v1f %>% 
+  select(contains("first_date")) %>% 
+  names() %>% 
+  unique()
+
+first <- nm1 %>% 
+  map(~ pi90v1f %>% 
+        select(matches(.x), first_vaccine_date_1) %>%
+        reduce(dayinterval)) %>%
+  set_names(paste0(nm1, "_dayinterval_vax1"))
+
+nm2 <- first %>% 
+  names()
+
+within_90days <- bind_cols(first) %>% 
+  transmute(across(all_of(nm2), ~if_else(.x >= -90 & .x <= 90, .x, NaN))) %>% 
+  rename_with(~str_c(., "_within90days"), everything())
+
+nm4 <- within_90days %>% 
+  names()
+
+within_90days_binary <- within_90days %>% 
+  transmute(across(all_of(nm4), ~factor(case_when(.x < 0 ~ "before",
+                                            .x >= 0 ~ "after"), levels = c("before", "after")))) %>% 
+  rename_with(~str_c(., "_binary"), everything())
+
+total <- within_90days_binary %>% 
+  select(contains("vax1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  group_by(disease) %>% 
+  summarize(n= n())  
+
+before <- within_90days_binary %>% 
+  select(contains("vax1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "before") %>% 
+  group_by(disease) %>% 
+  summarize(before = n())  
+
+after <- within_90days_binary %>% 
+  select(contains("vax1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "after") %>% 
+  group_by(disease) %>% 
+  summarize(after = n())
+
+allpt_90days <- total %>% 
+  left_join(before, by = "disease") %>% 
+  left_join(after, by = "disease") %>% 
+  mutate(ratio = after/before) %>% 
+  arrange(desc(ratio))
+
+pi90v1f_chart <-  allpt_90days %>% 
+  mutate(disease = case_when(
+    disease == "myocarditis_first_date_dayinterval_vax1_within90days_binary" ~ "myocarditis",
+    disease == "mast_cell_first_date_dayinterval_vax1_within90days_binary" ~ "mast_cell",
+    disease == "osteoarthritis_first_date_dayinterval_vax1_within90days_binary" ~ "osteoarthritis",
+    disease == "dysautonomia_first_date_dayinterval_vax1_within90days_binary" ~ "dysautonomia",
+    disease == "pots_first_date_dayinterval_vax1_within90days_binary" ~ "pots",
+    disease == "mi_first_date_dayinterval_vax1_within90days_binary" ~ "mi",
+    disease == "uti_first_date_dayinterval_vax1_within90days_binary" ~ "uti",
+    disease == "ehlers_danlos_first_date_dayinterval_vax1_within90days_binary" ~ "eds",
+    disease == "hf_first_date_dayinterval_vax1_within90days_binary" ~ "chf",
+    disease == "dizziness_first_date_dayinterval_vax1_within90days_binary" ~ "dizziness",
+    disease == "edema_first_date_dayinterval_vax1_within90days_binary" ~ "edema",
+    disease == "iron_definiciency_first_date_dayinterval_vax1_within90days_binary" ~ "ida",
+    disease == "back_pain_first_date_dayinterval_vax1_within90days_binary" ~ "lumbago",
+    disease == "stroke_first_date_dayinterval_vax1_within90days_binary" ~ "stroke",
+    disease == "fatigue_first_date_dayinterval_vax1_within90days_binary" ~ "fatigue" ,
+    disease == "hlp_first_date_dayinterval_vax1_within90days_binary" ~ "hld" ,
+    disease == "depression_first_date_dayinterval_vax1_within90days_binary" ~ "depression" ,
+    disease == "htn_first_date_dayinterval_vax1_within90days_binary" ~ "htn" ,
+    disease == "anxiety_first_date_dayinterval_vax1_within90days_binary" ~ "anxiety" ,
+    disease == "gerd_first_date_dayinterval_vax1_within90days_binary" ~ "gerd" ,
+    disease == "dm_first_date_dayinterval_vax1_within90days_binary" ~ "dm" ,
+    disease == "cellulitis_first_date_dayinterval_vax1_within90days_binary" ~"cellulitis" ,
+    disease == "eczema_first_date_dayinterval_vax1_within90days_binary" ~ "eczema" ,
+    disease == "headache_first_date_dayinterval_vax1_within90days_binary" ~ "headache" ,
+    disease == "ortho_hypo_first_date_dayinterval_vax1_within90days_binary" ~ "orthostasis"
+  )) %>% 
+  mutate(group = case_when(
+    disease == "myocarditis" ~ "Myocarditis",
+    disease == "mast_cell" | disease == "dysautonomia" | disease == "eds" | disease == "fatigue" | disease == "pots" ~ "POTS Group",
+    disease == "osteoarthritis" | disease == "uti" | disease == "edema" | disease == "ida" |
+      disease == "lumbago" | disease == "depression" | disease == "anxiety" | disease == "gerd" |
+      disease == "cellulitis" | disease == "eczema" | disease == "headache" | disease == "hld" |
+      disease == "htn" | disease == "dm" | disease == "dizziness" | disease == "orthostasis" ~ "Other",
+    disease == "mi" | disease == "chf" | disease == "stroke" ~ "MACE"
+  )) %>% 
+  filter(group != "MACE") %>% 
+  filter(disease != "orthostasis", disease != "osteoarthritis")
+
+kable(pi90v1f_chart)
+
+pi90v1f_chart %>%  
+  ggplot(aes(x = reorder(disease, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2', 
+                     limits = c(0.25, 4)) +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnoses") +
+  ggtitle("Diagnosis within 90 days pre/post first vaccination (female only, no COVID)") +
+  guides(fill=guide_legend(title="Clinical Group")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+pi90v1f_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before), after = sum(after)) %>% 
+  mutate(ratio = after/before) %>% 
+  ggplot(aes(x = reorder(group, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnosis group") +
+  ggtitle("Diagnosis group within 90 days pre/post first vaccination (female only, no COVID)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+pi90v1f_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before), after = sum(after)) %>% 
+  mutate(ratio = after/before)
+
+```
+
+These analyses are the same final ones as the vaccine ones, but with first COVID infection as the inciting time zero. We exclude patients with vaccination either preceding or within the time-range
+
+```{r setup, include=FALSE}
+
+covid <- read_csv(#####COVID DATA SET#######, col_types = cols(
+     MRN = col_double(),
+     DOB = col_date(format = "%F %T"),
+     RACE = col_character(),
+     ETHNICITY = col_character(),
+     GENDER = col_character(),
+     `VACCINE 1` = col_character(),
+     `FIRST_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `SECOND_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `THIRD_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `FOURTH_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `FIFTH_VACCINE_DATE 1` = col_date(format = "%F %T"),
+     `VACCINE 2` = col_character(),
+     `FIRST_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `SECOND_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `THIRD_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `FOURTH_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `FIFTH_VACCINE_DATE 2` = col_date(format = "%F %T"),
+     `VACCINE 3` = col_character(),
+     `FIRST_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `SECOND_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `THIRD_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `FOURTH_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `FIFTH_VACCINE_DATE 3` = col_date(format = "%F %T"),
+     `COVID_CONFIRMED_DTTM 1` = col_date(format = "%F %T"),
+     `COVID_CONFIRMED_DTTM 2` = col_date(format = "%F %T"),
+     `COVID_CONFIRMED_DTTM 3` = col_date(format = "%F %T"),
+     `COVID_CONFIRMED_DTTM 4` = col_date(format = "%F %T"),
+     sum_enc_b4 = col_double(),
+     sum_enc_after = col_double(),
+     DYSAUTONOMIA = col_double(),
+     DYSAUTONOMIA_FIRST_DATE = col_date(format = "%F %T"),
+     POTS = col_double(),
+     POTS_FIRST_DATE = col_date(format = "%F %T"),
+     MAST_CELL = col_double(),
+     MAST_CELL_FIRST_DATE = col_date(format = "%F %T"),
+     `EHLERS-DANLOS` = col_double(),
+     `EHLERS-DANLOS_FIRST_DATE` = col_date(format = "%F %T"),
+     FATIGUE = col_double(),
+     FATIGUE_FIRST_DATE = col_date(format = "%F %T"),
+     ORTHO_HYPO = col_double(),
+     ORTHO_HYPO_FIRST_DATE = col_date(format = "%F %T"),
+     DIZZINESS = col_double(),
+     DIZZINESS_FIRST_DATE = col_date(format = "%F %T"),
+     HTN = col_double(),
+     HTN_FIRST_DATE = col_date(format = "%F %T"),
+     DM = col_double(),
+     DM_FIRST_DATE = col_date(format = "%F %T"),
+     MI = col_double(),
+     MI_FIRST_DATE = col_date(format = "%F %T"),
+     HF = col_double(),
+     HF_FIRST_DATE = col_date(format = "%F %T"),
+     STROKE = col_double(),
+     STROKE_FIRST_DATE = col_date(format = "%F %T"),
+     HLP = col_double(),
+     HLP_FIRST_DATE = col_date(format = "%F %T"),
+     MYOCARDITIS = col_double(),
+     MYOCARDITIS_FIRST_DATE = col_date(format = "%F %T"),
+     DEPRESSION = col_double(),
+     DEPRESSION_FIRST_DATE = col_date(format = "%F %T"),
+     ANXIETY = col_double(),
+     ANXIETY_FIRST_DATE = col_date(format = "%F %T"),
+     ECZEMA  = col_double(),
+     ECZEMA_FIRST_DATE = col_date(format = "%F %T"),
+     ANXIETY = col_double(),
+     ANXIETY_FIRST_DATE = col_date(format = "%F %T"),
+     UTI = col_double(),
+     UTI_FIRST_DATE = col_date(format = "%F %T"),
+     IRON_DEFINICIENCY = col_double(),
+     IRON_DEFINICIENCY_FIRST_DATE = col_date(format = "%F %T"),
+     GERD = col_double(),
+     GERD_FIRST_DATE = col_date(format = "%F %T"),
+     OSTEOARTHRITIS = col_double(),
+     OSTEOARTHRITIS_FIRST_DATE = col_date(format = "%F %T"),
+     BACK_PAIN = col_double(),
+     BACK_PAIN_FIRST_DATE = col_date(format = "%F %T"),
+     EDEMA = col_double(),
+     EDEMA_FIRST_DATE = col_date(format = "%F %T"),
+     HEADACHE = col_double(),
+     HEADACHE_FIRST_DATE = col_date(format = "%F %T"),
+     AGE = col_double()
+   )) %>% 
+  clean_names() %>% 
+  group_by(mrn) %>% 
+  slice(1L) %>% 
+  ungroup()
+
+dayinterval <- function(x, y) {
+ floor(interval(y, x) / days(1)) 
+}
+
+ci90b <- covid %>% 
+  filter(is.na(first_vaccine_date_1) |
+    interval(covid_confirmed_dttm_1, first_vaccine_date_1)/days(1) > 90)
+
+ci90m <- covid %>% 
+  filter(is.na(first_vaccine_date_1) |
+    interval(covid_confirmed_dttm_1, first_vaccine_date_1)/days(1) > 90) %>% 
+  filter(gender_desc == "MALE")
+  
+ci90f <- covid %>% 
+  filter(is.na(first_vaccine_date_1) |
+    interval(covid_confirmed_dttm_1, first_vaccine_date_1)/days(1) > 90) %>% 
+  filter(gender_desc == "FEMALE")
+
+```
+
+COVID
+Interval: 90 days
+Sex: Both
+
+```{r, echo=FALSE}
+nm1 <- ci90b %>% 
+  select(contains("first_date")) %>% 
+  names() %>% 
+  unique()
+
+first <- nm1 %>% 
+  map(~ ci90b %>% 
+        select(matches(.x), covid_confirmed_dttm_1) %>%
+        reduce(dayinterval)) %>%
+  set_names(paste0(nm1, "_dayinterval_cov1"))
+
+nm2 <- first %>% 
+  names()
+
+within_90days <- bind_cols(first) %>% 
+  transmute(across(all_of(nm2), ~if_else(.x >= -90 & .x <= 90, .x, NaN))) %>% 
+  rename_with(~str_c(., "_within90days"), everything())
+
+nm4 <- within_90days %>% 
+  names()
+
+within_90days_binary <- within_90days %>% 
+  transmute(across(all_of(nm4), ~factor(case_when(.x < 0 ~ "before",
+                                            .x >= 0 ~ "after"), levels = c("before", "after")))) %>% 
+  rename_with(~str_c(., "_binary"), everything())
+
+total <- within_90days_binary %>% 
+  select(contains("cov1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  group_by(disease) %>% 
+  summarize(n= n())  
+
+before <- within_90days_binary %>% 
+  select(contains("cov1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "before") %>% 
+  group_by(disease) %>% 
+  summarize(before = n())  
+
+after <- within_90days_binary %>% 
+  select(contains("cov1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "after") %>% 
+  group_by(disease) %>% 
+  summarize(after = n())
+
+allpt_90days <- total %>% 
+  left_join(before, by = "disease") %>% 
+  left_join(after, by = "disease") %>% 
+  mutate(ratio = after/before) %>% 
+  arrange(desc(ratio))
+
+ci90b_chart <-  allpt_90days %>% 
+  mutate(disease = case_when(
+    disease == "myocarditis_first_date_dayinterval_cov1_within90days_binary" ~ "myocarditis",
+    disease == "mast_cell_first_date_dayinterval_cov1_within90days_binary" ~ "mast_cell",
+    disease == "osteoarthritis_first_date_dayinterval_cov1_within90days_binary" ~ "osteoarthritis",
+    disease == "dysautonomia_first_date_dayinterval_cov1_within90days_binary" ~ "dysautonomia",
+    disease == "pots_first_date_dayinterval_cov1_within90days_binary" ~ "pots",
+    disease == "mi_first_date_dayinterval_cov1_within90days_binary" ~ "mi",
+    disease == "uti_first_date_dayinterval_cov1_within90days_binary" ~ "uti",
+    disease == "ehlers_danlos_first_date_dayinterval_cov1_within90days_binary" ~ "eds",
+    disease == "hf_first_date_dayinterval_cov1_within90days_binary" ~ "chf",
+    disease == "dizziness_first_date_dayinterval_cov1_within90days_binary" ~ "dizziness",
+    disease == "edema_first_date_dayinterval_cov1_within90days_binary" ~ "edema",
+    disease == "iron_definiciency_first_date_dayinterval_cov1_within90days_binary" ~ "ida",
+    disease == "back_pain_first_date_dayinterval_cov1_within90days_binary" ~ "lumbago",
+    disease == "stroke_first_date_dayinterval_cov1_within90days_binary" ~ "stroke",
+    disease == "fatigue_first_date_dayinterval_cov1_within90days_binary" ~ "fatigue" ,
+    disease == "hlp_first_date_dayinterval_cov1_within90days_binary" ~ "hld" ,
+    disease == "depression_first_date_dayinterval_cov1_within90days_binary" ~ "depression" ,
+    disease == "htn_first_date_dayinterval_cov1_within90days_binary" ~ "htn" ,
+    disease == "anxiety_first_date_dayinterval_cov1_within90days_binary" ~ "anxiety" ,
+    disease == "gerd_first_date_dayinterval_cov1_within90days_binary" ~ "gerd" ,
+    disease == "dm_first_date_dayinterval_cov1_within90days_binary" ~ "dm" ,
+    disease == "cellulitis_first_date_dayinterval_cov1_within90days_binary" ~"cellulitis" ,
+    disease == "eczema_first_date_dayinterval_cov1_within90days_binary" ~ "eczema" ,
+    disease == "headache_first_date_dayinterval_cov1_within90days_binary" ~ "headache" ,
+    disease == "ortho_hypo_first_date_dayinterval_cov1_within90days_binary" ~ "orthostasis"
+  )) %>% 
+  mutate(group = case_when(
+    disease == "myocarditis" ~ "Myocarditis",
+    disease == "mast_cell" | disease == "dysautonomia" | disease == "eds" | disease == "fatigue" | disease == "pots" ~ "POTS Group",
+    disease == "osteoarthritis" | disease == "uti" | disease == "edema" | disease == "ida" |
+      disease == "lumbago" | disease == "depression" | disease == "anxiety" | disease == "gerd" |
+      disease == "cellulitis" | disease == "eczema" | disease == "headache" | disease == "hld" |
+      disease == "htn" | disease == "dm" | disease == "dizziness" | disease == "orthostasis" ~ "Other",
+    disease == "mi" | disease == "chf" | disease == "stroke" ~ "MACE"
+  )) %>% 
+  filter(group != "MACE") %>%
+  filter(disease != "orthostasis", disease != "osteoarthritis")
+
+kable(ci90b_chart)
+
+ci90b_chart %>%  
+  filter(!is.na(ratio)) %>% 
+  ggplot(aes(x = reorder(disease, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnoses") +
+  ggtitle("Diagnosis within 90 days pre/post first COVID infection (both sexes, no vaccination)") +
+  guides(fill=guide_legend(title="Clinical Group")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+ci90b_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before, na.rm = TRUE), after = sum(after, na.rm = TRUE)) %>% 
+  mutate(ratio = after/before) %>% 
+  filter(!is.na(ratio)) %>% 
+  ggplot(aes(x = reorder(group, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnosis group") +
+  ggtitle("Diagnosis group within 90 days pre/post first COVID infection (both sexes, no vacciation)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+ci90b_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before, na.rm = TRUE), after = sum(after, na.rm = TRUE)) %>% mutate(ratio = after/before)
+
+```
+
+Infection
+Interval: 90 days
+Sex: MALE
+
+```{r, echo=FALSE}
+nm1 <- ci90m %>% 
+  select(contains("first_date")) %>% 
+  names() %>% 
+  unique()
+
+first <- nm1 %>% 
+  map(~ ci90m %>% 
+        select(matches(.x), covid_confirmed_dttm_1) %>%
+        reduce(dayinterval)) %>%
+  set_names(paste0(nm1, "_dayinterval_cov1"))
+
+nm2 <- first %>% 
+  names()
+
+within_90days <- bind_cols(first) %>% 
+  transmute(across(all_of(nm2), ~if_else(.x >= -90 & .x <= 90, .x, NaN))) %>% 
+  rename_with(~str_c(., "_within90days"), everything())
+
+nm4 <- within_90days %>% 
+  names()
+
+within_90days_binary <- within_90days %>% 
+  transmute(across(all_of(nm4), ~factor(case_when(.x < 0 ~ "before",
+                                            .x >= 0 ~ "after"), levels = c("before", "after")))) %>% 
+  rename_with(~str_c(., "_binary"), everything())
+
+total <- within_90days_binary %>% 
+  select(contains("cov1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  group_by(disease) %>% 
+  summarize(n= n())  
+
+before <- within_90days_binary %>% 
+  select(contains("cov1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "before") %>% 
+  group_by(disease) %>% 
+  summarize(before = n())  
+
+after <- within_90days_binary %>% 
+  select(contains("cov1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "after") %>% 
+  group_by(disease) %>% 
+  summarize(after = n())
+
+allpt_90days <- total %>% 
+  left_join(before, by = "disease") %>% 
+  left_join(after, by = "disease") %>% 
+  mutate(ratio = after/before) %>% 
+  arrange(desc(ratio))
+
+ci90m_chart <-  allpt_90days %>% 
+  mutate(disease = case_when(
+    disease == "myocarditis_first_date_dayinterval_cov1_within90days_binary" ~ "myocarditis",
+    disease == "mast_cell_first_date_dayinterval_cov1_within90days_binary" ~ "mast_cell",
+    disease == "osteoarthritis_first_date_dayinterval_cov1_within90days_binary" ~ "osteoarthritis",
+    disease == "dysautonomia_first_date_dayinterval_cov1_within90days_binary" ~ "dysautonomia",
+    disease == "pots_first_date_dayinterval_cov1_within90days_binary" ~ "pots",
+    disease == "mi_first_date_dayinterval_cov1_within90days_binary" ~ "mi",
+    disease == "uti_first_date_dayinterval_cov1_within90days_binary" ~ "uti",
+    disease == "ehlers_danlos_first_date_dayinterval_cov1_within90days_binary" ~ "eds",
+    disease == "hf_first_date_dayinterval_cov1_within90days_binary" ~ "chf",
+    disease == "dizziness_first_date_dayinterval_cov1_within90days_binary" ~ "dizziness",
+    disease == "edema_first_date_dayinterval_cov1_within90days_binary" ~ "edema",
+    disease == "iron_definiciency_first_date_dayinterval_cov1_within90days_binary" ~ "ida",
+    disease == "back_pain_first_date_dayinterval_cov1_within90days_binary" ~ "lumbago",
+    disease == "stroke_first_date_dayinterval_cov1_within90days_binary" ~ "stroke",
+    disease == "fatigue_first_date_dayinterval_cov1_within90days_binary" ~ "fatigue" ,
+    disease == "hlp_first_date_dayinterval_cov1_within90days_binary" ~ "hld" ,
+    disease == "depression_first_date_dayinterval_cov1_within90days_binary" ~ "depression" ,
+    disease == "htn_first_date_dayinterval_cov1_within90days_binary" ~ "htn" ,
+    disease == "anxiety_first_date_dayinterval_cov1_within90days_binary" ~ "anxiety" ,
+    disease == "gerd_first_date_dayinterval_cov1_within90days_binary" ~ "gerd" ,
+    disease == "dm_first_date_dayinterval_cov1_within90days_binary" ~ "dm" ,
+    disease == "cellulitis_first_date_dayinterval_cov1_within90days_binary" ~"cellulitis" ,
+    disease == "eczema_first_date_dayinterval_cov1_within90days_binary" ~ "eczema" ,
+    disease == "headache_first_date_dayinterval_cov1_within90days_binary" ~ "headache" ,
+    disease == "ortho_hypo_first_date_dayinterval_cov1_within90days_binary" ~ "orthostasis"
+  )) %>% 
+  mutate(group = case_when(
+    disease == "myocarditis" ~ "Myocarditis",
+    disease == "mast_cell" | disease == "dysautonomia" | disease == "eds" | disease == "fatigue" | disease == "pots" ~ "POTS Group",
+    disease == "osteoarthritis" | disease == "uti" | disease == "edema" | disease == "ida" |
+      disease == "lumbago" | disease == "depression" | disease == "anxiety" | disease == "gerd" |
+      disease == "cellulitis" | disease == "eczema" | disease == "headache" | disease == "hld" |
+      disease == "htn" | disease == "dm" | disease == "dizziness" | disease == "orthostasis" ~ "Other",
+    disease == "mi" | disease == "chf" | disease == "stroke" ~ "MACE"
+  )) %>% 
+  filter(group != "MACE") %>%
+  filter(disease != "orthostasis", disease != "osteoarthritis")
+
+kable(ci90m_chart)
+
+ci90m_chart %>%  
+  filter(!is.na(ratio)) %>% 
+  ggplot(aes(x = reorder(disease, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnoses") +
+  ggtitle("Diagnosis within 90 days pre/post first COVID infection (male only, no vaccination)") +
+  guides(fill=guide_legend(title="Clinical Group")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey")) +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+ci90m_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before, na.rm = TRUE), after = sum(after, na.rm = TRUE)) %>% 
+  mutate(ratio = after/before) %>% 
+  filter(!is.na(ratio)) %>% 
+  ggplot(aes(x = reorder(group, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnosis group") +
+  ggtitle("Diagnosis group within 90 days pre/post first COVID infection (male only, no vaccination)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+ci90m_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before, na.rm = TRUE), after = sum(after, na.rm = TRUE)) %>% 
+  mutate(ratio = after/before)
+
+```
+
+Infection
+Interval: 90 days
+Sex: FEMALE
+
+```{r, echo=FALSE}
+nm1 <- ci90f %>% 
+  select(contains("first_date")) %>% 
+  names() %>% 
+  unique()
+
+first <- nm1 %>% 
+  map(~ ci90f %>% 
+        select(matches(.x), covid_confirmed_dttm_1) %>%
+        reduce(dayinterval)) %>%
+  set_names(paste0(nm1, "_dayinterval_cov1"))
+
+nm2 <- first %>% 
+  names()
+
+within_90days <- bind_cols(first) %>% 
+  transmute(across(all_of(nm2), ~if_else(.x >= -90 & .x <= 90, .x, NaN))) %>% 
+  rename_with(~str_c(., "_within90days"), everything())
+
+nm4 <- within_90days %>% 
+  names()
+
+within_90days_binary <- within_90days %>% 
+  transmute(across(all_of(nm4), ~factor(case_when(.x < 0 ~ "before",
+                                            .x >= 0 ~ "after"), levels = c("before", "after")))) %>% 
+  rename_with(~str_c(., "_binary"), everything())
+
+total <- within_90days_binary %>% 
+  select(contains("cov1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  group_by(disease) %>% 
+  summarize(n= n())  
+
+before <- within_90days_binary %>% 
+  select(contains("cov1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "before") %>% 
+  group_by(disease) %>% 
+  summarize(before = n())  
+
+after <- within_90days_binary %>% 
+  select(contains("cov1")) %>%
+  pivot_longer(cols = 1:25, names_to = "disease", values_to = "timing") %>% 
+  drop_na(timing) %>% 
+  filter(timing == "after") %>% 
+  group_by(disease) %>% 
+  summarize(after = n())
+
+allpt_90days <- total %>% 
+  left_join(before, by = "disease") %>% 
+  left_join(after, by = "disease") %>% 
+  mutate(ratio = after/before) %>% 
+  arrange(desc(ratio))
+
+ci90f_chart <-  allpt_90days %>% 
+  mutate(disease = case_when(
+    disease == "myocarditis_first_date_dayinterval_cov1_within90days_binary" ~ "myocarditis",
+    disease == "mast_cell_first_date_dayinterval_cov1_within90days_binary" ~ "mast_cell",
+    disease == "osteoarthritis_first_date_dayinterval_cov1_within90days_binary" ~ "osteoarthritis",
+    disease == "dysautonomia_first_date_dayinterval_cov1_within90days_binary" ~ "dysautonomia",
+    disease == "pots_first_date_dayinterval_cov1_within90days_binary" ~ "pots",
+    disease == "mi_first_date_dayinterval_cov1_within90days_binary" ~ "mi",
+    disease == "uti_first_date_dayinterval_cov1_within90days_binary" ~ "uti",
+    disease == "ehlers_danlos_first_date_dayinterval_cov1_within90days_binary" ~ "eds",
+    disease == "hf_first_date_dayinterval_cov1_within90days_binary" ~ "chf",
+    disease == "dizziness_first_date_dayinterval_cov1_within90days_binary" ~ "dizziness",
+    disease == "edema_first_date_dayinterval_cov1_within90days_binary" ~ "edema",
+    disease == "iron_definiciency_first_date_dayinterval_cov1_within90days_binary" ~ "ida",
+    disease == "back_pain_first_date_dayinterval_cov1_within90days_binary" ~ "lumbago",
+    disease == "stroke_first_date_dayinterval_cov1_within90days_binary" ~ "stroke",
+    disease == "fatigue_first_date_dayinterval_cov1_within90days_binary" ~ "fatigue" ,
+    disease == "hlp_first_date_dayinterval_cov1_within90days_binary" ~ "hld" ,
+    disease == "depression_first_date_dayinterval_cov1_within90days_binary" ~ "depression" ,
+    disease == "htn_first_date_dayinterval_cov1_within90days_binary" ~ "htn" ,
+    disease == "anxiety_first_date_dayinterval_cov1_within90days_binary" ~ "anxiety" ,
+    disease == "gerd_first_date_dayinterval_cov1_within90days_binary" ~ "gerd" ,
+    disease == "dm_first_date_dayinterval_cov1_within90days_binary" ~ "dm" ,
+    disease == "cellulitis_first_date_dayinterval_cov1_within90days_binary" ~"cellulitis" ,
+    disease == "eczema_first_date_dayinterval_cov1_within90days_binary" ~ "eczema" ,
+    disease == "headache_first_date_dayinterval_cov1_within90days_binary" ~ "headache" ,
+    disease == "ortho_hypo_first_date_dayinterval_cov1_within90days_binary" ~ "orthostasis"
+  )) %>% 
+  mutate(group = case_when(
+    disease == "myocarditis" ~ "Myocarditis",
+    disease == "mast_cell" | disease == "dysautonomia" | disease == "eds" | disease == "fatigue" | disease == "pots" ~ "POTS Group",
+    disease == "osteoarthritis" | disease == "uti" | disease == "edema" | disease == "ida" |
+      disease == "lumbago" | disease == "depression" | disease == "anxiety" | disease == "gerd" |
+      disease == "cellulitis" | disease == "eczema" | disease == "headache" | disease == "hld" |
+      disease == "htn" | disease == "dm" | disease == "dizziness" | disease == "orthostasis" ~ "Other",
+    disease == "mi" | disease == "chf" | disease == "stroke" ~ "MACE"
+  )) %>% 
+  filter(group != "MACE") %>%
+  filter(disease != "orthostasis", disease != "osteoarthritis")
+
+kable(ci90f_chart)
+
+ci90f_chart %>%  
+  filter(!is.na(ratio)) %>% 
+  ggplot(aes(x = reorder(disease, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnoses") +
+  ggtitle("Diagnosis within 90 days pre/post first COVID infection (female only, no vaccination)") +
+  guides(fill=guide_legend(title="Clinical Group")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+ci90f_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before, na.rm = TRUE), after = sum(after, na.rm = TRUE)) %>% 
+  mutate(ratio = after/before) %>% 
+  filter(!is.na(ratio)) %>% 
+  ggplot(aes(x = reorder(group, -ratio), y = ratio, fill = group)) + geom_bar(stat = "identity") +
+  scale_y_continuous(trans='log2') +
+  ylab("Ratio of incident diagnoses after vs before (log)") +
+  xlab("Diagnosis group") +
+  ggtitle("Diagnosis group within 90 days pre/post first COVID infection (female only, no vaccination)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), panel.background = element_blank(),
+        panel.grid = element_line(color = "light grey"),
+        legend.position="top") +
+  scale_fill_manual(values=c("#b2182b", "#f4a582", "#4393c3"))
+
+ci90f_chart %>% 
+  group_by(group) %>% 
+  summarize(n = sum(n), before = sum(before, na.rm = TRUE), after = sum(after, na.rm = TRUE)) %>% 
+  mutate(ratio = after/before)
+
+```
+
+Code for Rate/Ratio chart
+```{r}
+read_csv("rateratiofigure.csv") %>% 
+  ggplot(aes(x = ratio, y= rate)) + geom_point(aes(group = cohort, shape = cohort, color = cohort)) +
+  scale_y_log10() +
+  geom_label_repel(aes(label = disease, fill = cohort),
+                   size = 3,
+                   box.padding   = 0.5, 
+                   point.padding = 0.5,
+                   segment.color = 'grey50',
+                   max.overlaps = 24) +
+  theme_classic() +
+  scale_color_manual(values = c("Infection" = "#FFC20A", "Vaccination" = "#0C7BDC")) +
+  scale_fill_manual(values = c("Infection" = "#FFC20A", "Vaccination" = "#0C7BDC"))
+```
